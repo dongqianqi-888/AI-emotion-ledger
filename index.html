@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>情绪记账 · 钱流向了哪种情绪</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    /* Monument Valley inspired, calm & muted */
+    --cream:#F4EDE4;
+    --cream-2:#EFE6DA;
+    --ink:#4A4453;
+    --ink-soft:#7C7488;
+    --purple:#6B5B95;
+    --purple-soft:#9C8FB8;
+    --pink:#E8B4BC;
+    --sage:#9CB8A4;
+    --peach:#E8C39E;
+    --sky:#A7C4D4;
+    --gold:#E0B25C;
+    --shadow:rgba(74,68,83,0.12);
+    --card:#FBF7F1;
+    --line:rgba(74,68,83,0.10);
+    --radius:22px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Quicksand","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 700px at 80% -10%, #F7E2E6 0%, rgba(247,226,230,0) 55%),
+      radial-gradient(1000px 600px at 0% 100%, #E2ECE6 0%, rgba(226,236,230,0) 55%),
+      linear-gradient(160deg, var(--cream) 0%, var(--cream-2) 100%);
+    min-height:100vh;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+    letter-spacing:.2px;
+  }
+  /* floating geometry */
+  .bg-shapes{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+  .shape{position:absolute;opacity:.16;animation:float 18s ease-in-out infinite;}
+  .shape.s2{animation-duration:24s;animation-direction:reverse;}
+  .shape.s3{animation-duration:30s;}
+  @keyframes float{
+    0%{transform:translateY(0) rotate(0deg);}
+    50%{transform:translateY(-26px) rotate(8deg);}
+    100%{transform:translateY(0) rotate(0deg);}
+  }
+  .wrap{position:relative;z-index:1;max-width:880px;margin:0 auto;padding:30px 22px 80px;}
+
+  /* top bar */
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px;}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;color:var(--purple);font-size:15px;}
+  .brand .dot{width:14px;height:14px;border-radius:4px;background:var(--purple);transform:rotate(45deg);box-shadow:0 2px 8px var(--shadow);}
+  .audio-btn{
+    border:1px solid var(--line);background:var(--card);color:var(--ink-soft);
+    width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:16px;
+    display:flex;align-items:center;justify-content:center;transition:.3s;
+  }
+  .audio-btn:hover{transform:scale(1.05);color:var(--purple);}
+
+  /* stepper */
+  .stepper{display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:34px;}
+  .step-pill{
+    display:flex;align-items:center;gap:8px;color:var(--ink-soft);
+    font-size:13px;opacity:.55;transition:.4s;
+  }
+  .step-pill .num{
+    width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;
+    transition:.4s;
+  }
+  .step-pill.active{opacity:1;color:var(--purple);}
+  .step-pill.active .num{background:var(--purple);color:#fff;border-color:var(--purple);}
+  .step-pill.done{opacity:.85;color:var(--sage);}
+  .step-pill.done .num{background:var(--sage);color:#fff;border-color:var(--sage);}
+  .step-sep{flex:0 0 26px;height:1.5px;background:var(--line);border-radius:2px;}
+
+  /* panels */
+  .panel{animation:rise .7s cubic-bezier(.2,.7,.3,1) both;}
+  @keyframes rise{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:none;}}
+  .panel.hidden{display:none;}
+
+  h1{font-size:30px;font-weight:600;margin:0 0 10px;color:var(--ink);line-height:1.3;}
+  h2{font-size:22px;font-weight:600;margin:0 0 6px;}
+  .lead{color:var(--ink-soft);font-size:15px;line-height:1.7;margin:0 0 26px;max-width:620px;}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:26px;box-shadow:0 18px 40px -22px var(--shadow);margin-bottom:22px;
+  }
+
+  /* intro */
+  .intro-emoji{font-size:40px;margin-bottom:6px;}
+  .cta-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;}
+  .btn{
+    border:none;cursor:pointer;font-family:inherit;font-size:15px;font-weight:600;
+    padding:14px 26px;border-radius:16px;transition:.3s;letter-spacing:.5px;
+  }
+  .btn-primary{background:var(--purple);color:#fff;box-shadow:0 12px 26px -12px var(--purple);}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 18px 32px -12px var(--purple);}
+  .btn-ghost{background:transparent;color:var(--purple);border:1.5px solid var(--purple);}
+  .btn-ghost:hover{background:rgba(107,91,149,.08);}
+  .btn-soft{background:var(--cream-2);color:var(--ink);}
+  .btn-soft:hover{transform:translateY(-2px);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+  /* import */
+  .drop{
+    border:2px dashed var(--purple-soft);border-radius:18px;padding:30px;text-align:center;
+    color:var(--ink-soft);cursor:pointer;transition:.3s;background:rgba(255,255,255,.4);
+  }
+  .drop:hover{border-color:var(--purple);background:rgba(255,255,255,.7);}
+  .drop b{color:var(--purple);}
+  .drop small{display:block;margin-top:8px;font-size:12px;opacity:.8;}
+  textarea{
+    width:100%;min-height:110px;border:1px solid var(--line);border-radius:14px;
+    padding:14px;font-family:inherit;font-size:13px;color:var(--ink);background:#fff;resize:vertical;
+  }
+  textarea:focus{outline:none;border-color:var(--purple-soft);}
+  .or{text-align:center;color:var(--ink-soft);font-size:13px;margin:16px 0;opacity:.7;}
+  .field-label{font-size:13px;color:var(--ink-soft);margin:0 0 8px;font-weight:600;}
+
+  /* category overview bars */
+  .cat-row{display:flex;align-items:center;gap:12px;margin:0 0 12px;}
+  .cat-name{width:96px;font-size:13px;color:var(--ink);flex:0 0 auto;display:flex;align-items:center;gap:6px;}
+  .cat-tag{flex:0 0 auto;font-size:10px;color:#fff;background:var(--ink-soft);padding:1px 7px;border-radius:8px;opacity:.7;}
+  .cat-bar-track{flex:1;height:14px;background:var(--cream-2);border-radius:10px;overflow:hidden;}
+  .cat-bar{height:100%;border-radius:10px;transition:width 1s cubic-bezier(.2,.7,.3,1);}
+  .cat-amt{width:92px;text-align:right;font-size:13px;font-weight:600;color:var(--ink);flex:0 0 auto;}
+
+  /* step2 */
+  .fixed-grid{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 4px;}
+  .chip{
+    border:1.5px solid var(--line);background:#fff;color:var(--ink-soft);
+    padding:9px 16px;border-radius:30px;cursor:pointer;font-size:13px;font-weight:600;transition:.25s;
+    user-select:none;
+  }
+  .chip.sel{background:var(--purple);color:#fff;border-color:var(--purple);box-shadow:0 8px 18px -10px var(--purple);}
+  .tag-list{display:flex;flex-direction:column;gap:14px;}
+  .tag-card{
+    background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px 18px 16px;
+    display:grid;grid-template-columns:1fr;gap:12px;transition:.4s;
+  }
+  .tag-card .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+  .tag-card .desc{font-size:15px;font-weight:600;color:var(--ink);}
+  .tag-card .meta{font-size:12px;color:var(--ink-soft);}
+  .tag-card .amt{font-size:20px;font-weight:600;color:var(--purple);white-space:nowrap;}
+  .emo-pick{display:flex;flex-wrap:wrap;gap:8px;}
+  .emo{
+    border:1.5px solid var(--line);background:#fff;color:var(--ink-soft);
+    padding:7px 13px;border-radius:14px;cursor:pointer;font-size:12.5px;font-weight:600;
+    display:flex;align-items:center;gap:6px;transition:.2s;
+  }
+  .emo .swatch{width:10px;height:10px;border-radius:50%;}
+  .emo.sel{color:#fff;border-color:transparent;}
+  .intensity{display:flex;align-items:center;gap:10px;margin-top:2px;}
+  .intensity .lab{font-size:12px;color:var(--ink-soft);}
+  .dots{display:flex;gap:7px;}
+  .dot-i{width:16px;height:16px;border-radius:50%;background:var(--cream-2);cursor:pointer;border:1.5px solid var(--line);transition:.2s;}
+  .dot-i.on{background:var(--purple);border-color:var(--purple);transform:scale(1.08);}
+  .tag-card.done{box-shadow:0 0 0 2px var(--sage) inset;}
+  .tag-card .done-mark{font-size:12px;color:var(--sage);font-weight:600;}
+  .add-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+  .add-row input{
+    border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-family:inherit;font-size:13px;
+    background:#fff;color:var(--ink);
+  }
+  .add-row input:focus{outline:none;border-color:var(--purple-soft);}
+  .add-row .d{flex:2;min-width:140px;}
+  .add-row .a{flex:1;min-width:90px;}
+
+  /* result */
+  .result-hero{text-align:center;padding:8px 0 6px;}
+  .result-hero .kicker{font-size:13px;color:var(--sage);font-weight:600;letter-spacing:2px;}
+  .result-hero h2{font-size:24px;margin:10px 0 4px;}
+  .result-hero p{color:var(--ink-soft);font-size:14px;margin:0;}
+  .tower{display:flex;flex-direction:column;gap:8px;margin:24px 0 6px;}
+  .slab{
+    position:relative;border-radius:14px;padding:14px 18px;color:#fff;overflow:hidden;
+    display:flex;align-items:center;justify-content:space-between;
+    animation:slidein .8s cubic-bezier(.2,.7,.3,1) both;
+    box-shadow:0 14px 30px -18px rgba(0,0,0,.4);
+  }
+  @keyframes slidein{from{opacity:0;transform:translateX(-24px);}to{opacity:1;transform:none;}}
+  .slab .emo-name{font-size:16px;font-weight:600;z-index:1;}
+  .slab .emo-pct{font-size:22px;font-weight:600;z-index:1;}
+  .slab .emo-sub{font-size:12px;opacity:.92;z-index:1;}
+  .insight{
+    background:linear-gradient(135deg,#F3E7EE,#E7EEEA);border:1px solid var(--line);
+    border-radius:18px;padding:22px;margin-top:18px;line-height:1.8;font-size:15px;color:var(--ink);
+  }
+  .insight .tag-line{font-weight:600;color:var(--purple);}
+  .comfort{
+    border-left:4px solid var(--sage);background:rgba(156,184,164,.12);
+    padding:14px 18px;border-radius:0 14px 14px 0;margin-top:14px;font-size:14.5px;line-height:1.8;color:var(--ink);
+  }
+  .action{
+    border-left:4px solid var(--gold);background:rgba(224,178,92,.12);
+    padding:14px 18px;border-radius:0 14px 14px 0;margin-top:12px;font-size:14.5px;line-height:1.8;color:var(--ink);
+  }
+  .stat-inline{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin:14px 0 4px;}
+  .stat-inline .s{text-align:center;}
+  .stat-inline .s .v{font-size:22px;font-weight:600;color:var(--purple);}
+  .stat-inline .s .l{font-size:12px;color:var(--ink-soft);}
+
+  .preview-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px;}
+  .preview-table th,.preview-table td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;}
+  .preview-table th{color:var(--ink-soft);font-weight:600;}
+  .preview-table td.amt{text-align:right;font-weight:600;color:var(--purple);}
+  .muted{color:var(--ink-soft);font-size:13px;}
+  .nav-row{display:flex;justify-content:space-between;gap:12px;margin-top:26px;}
+  .toast{
+    position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:12px 22px;border-radius:30px;font-size:14px;
+    opacity:0;pointer-events:none;transition:.4s;z-index:50;box-shadow:0 14px 30px -12px rgba(0,0,0,.5);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .foot{text-align:center;color:var(--ink-soft);font-size:12px;margin-top:40px;opacity:.7;line-height:1.7;}
+  a.link{color:var(--purple);text-decoration:none;border-bottom:1px dashed var(--purple-soft);}
+</style>
+</head>
+<body>
+<div class="bg-shapes" id="bgShapes"></div>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span>情绪记账</div>
+    <button class="audio-btn" id="audioBtn" title="音效开关">♪</button>
+  </div>
+
+  <div class="stepper">
+    <div class="step-pill" data-step="1"><span class="num">1</span>导入与概览</div>
+    <div class="step-sep"></div>
+    <div class="step-pill" data-step="2"><span class="num">2</span>情绪标记</div>
+    <div class="step-sep"></div>
+    <div class="step-pill" data-step="3"><span class="num">3</span>看清了</div>
+  </div>
+
+  <!-- INTRO -->
+  <section class="panel" id="panel-intro">
+    <div class="card" style="text-align:center;">
+      <h1>钱，流向了哪种情绪</h1>
+      <p class="lead" style="margin:0 auto 18px;">
+        你不是乱花，只是说不清钱去了哪里。<br/>
+        这个工具不让你记每一笔——每月只做一件事：<br/>
+        给几笔大额支出，打一个情绪标签。<br/>
+        月底，你会看见钱被什么「拿走」了。
+      </p>
+      <div class="cta-row" style="justify-content:center;">
+        <button class="btn btn-primary" id="startBtn">开始</button>
+      </div>
+      <p class="muted" style="margin-top:18px;">进入后，可导入你的账单，或先用示例流程感受一遍。</p>
+    </div>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel hidden" id="panel-1">
+    <h2>第一步 · 导入你的账单</h2>
+    <p class="lead">支持银行/支付导出的 CSV 或纯文本。系统会自动识别日期、金额、描述并归类。也能直接粘贴几行试试。</p>
+
+    <div class="card">
+      <div class="drop" id="drop">
+        <div>📂 点击选择 <b>CSV / TXT</b> 文件</div>
+        <small>常见列名：日期 / 时间 / 描述 / 备注 / 金额 / 收支。识别不到会提示你。</small>
+        <input type="file" id="fileInput" accept=".csv,.txt,.tsv" style="display:none" />
+      </div>
+      <div class="or">— 或者粘贴 —</div>
+      <div class="field-label">把账单内容粘贴到这里（每行一笔，或用逗号/制表符分隔）</div>
+      <textarea id="pasteArea" placeholder="2026-10-02,星巴克,38.00&#10;2026-10-03,地铁充值,100.00&#10;2026-10-05,淘宝-卫衣,299.00"></textarea>
+      <div class="cta-row" style="margin-top:14px;">
+        <button class="btn btn-soft" id="parseBtn">解析这笔账单</button>
+        <button class="btn btn-ghost" id="demoBtn">用示例体验流程</button>
+      </div>
+    </div>
+
+    <div class="card hidden" id="overviewCard">
+      <div class="field-label" id="overviewTitle">你的支出大类（本月）</div>
+      <div id="catBars"></div>
+      <p class="muted" id="overviewNote" style="margin-top:14px;"></p>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-soft" id="backToIntro">← 返回</button>
+      <button class="btn btn-primary" id="toStep2" disabled>下一步 · 标记情绪 →</button>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel hidden" id="panel-2">
+    <h2>第二步 · 排除固定支出，标记情绪</h2>
+    <p class="lead">先勾掉住房、交通等「固定支出」——它们不是失控的来源。剩下的，我们重点看几笔大的。</p>
+
+    <div class="card">
+      <div class="field-label">这些是系统识别出的类别，勾选属于「固定支出」的（可改）</div>
+      <div class="fixed-grid" id="fixedGrid"></div>
+    </div>
+
+    <div class="card">
+      <div class="field-label" id="tagTitle">挑几笔最大的非固定支出，给它们打个情绪标签（1–5 分强度）</div>
+      <div class="tag-list" id="tagList"></div>
+      <div class="add-row" style="margin-top:14px;">
+        <input class="d" id="addDesc" placeholder="没在列表里？手动加一笔，如：深夜外卖" />
+        <input class="a" id="addAmt" type="number" placeholder="金额" />
+        <button class="btn btn-soft" id="addBtn">＋ 加入</button>
+      </div>
+      <p class="muted" id="tagProgress" style="margin-top:12px;"></p>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-soft" id="backTo1">← 上一步</button>
+      <button class="btn btn-primary" id="toStep3" disabled>看结果 · 钱去了哪 →</button>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel hidden" id="panel-3">
+    <h2>第三步 · 你看见了</h2>
+    <div class="card">
+      <div class="result-hero">
+        <div class="kicker">本月 · 钱的情绪去向</div>
+        <h2 id="resultHeadline">你的钱，主要流向了——</h2>
+        <p id="resultSub"></p>
+      </div>
+      <div class="stat-inline" id="statLine"></div>
+      <div class="tower" id="tower"></div>
+
+      <div class="insight" id="insightBox"></div>
+      <div class="comfort" id="comfortBox"></div>
+      <div class="action" id="actionBox"></div>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-soft" id="backTo2">← 回去改标签</button>
+      <button class="btn btn-primary" id="restartBtn">重新开始</button>
+    </div>
+    <p class="foot">
+      数据只存在你这台设备上（localStorage），不会上传。<br/>
+      看清，比自责有用得多。
+    </p>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 情绪模型 ============ */
+const EMOTIONS = [
+  {key:"reward", name:"犒赏", color:"#E0B25C", desc:"奖励努力的自己", note:261.63},
+  {key:"anxiety", name:"焦虑", color:"#8E7CC3", desc:"替情绪买单", note:311.13},
+  {key:"social", name:"社交", color:"#E89B9B", desc:"人情与连接", note:349.23},
+  {key:"lonely", name:"孤独", color:"#7FA8C9", desc:"买一时的陪伴", note:293.66},
+  {key:"impulse", name:"冲动", color:"#E07A5F", desc:"没来得及想", note:392.00},
+  {key:"fatigue", name:"疲惫", color:"#9CB8A4", desc:"用消费充电", note:329.63},
+  {key:"joy", name:"快乐", color:"#F2C14E", desc:"纯粹的开心", note:440.00},
+  {key:"stress", name:"解压", color:"#C98B9B", desc:"负荷太重了", note:311.13}
+];
+const EMO_MAP = Object.fromEntries(EMOTIONS.map(e=>[e.key,e]));
+
+const COMFORT = {
+  reward:{c:"你不是乱花，是在认真奖励那个努力的自己。这份心意本身没有错。",
+    a:"下次想犒赏，把『买一件』换成『做一件』——一杯手冲、一段散步。成本更低，记忆更长。"},
+  anxiety:{c:"钱在这里，其实是你在替情绪买单。看清楚，就已经松了一半。",
+    a:"___ 下次那个时刻来临时，先给自己 10 分钟，不打开支付软件。十分钟足够让冲动降温。"},
+  social:{c:"人情不是浪费，是你和世界保持连接的力气。只是有些连接，可以更轻。",
+    a:"把高价的社交换成一次散步或家里的饭局，关系不会淡，钱包会喘口气。"},
+  lonely:{c:"你买的不是东西，是那一刻的陪伴。这很 human，别因此苛责自己。",
+    a:"下一次孤独来袭，先给一个具体的人发条消息，再决定要不要下单。"},
+  impulse:{c:"一时的心动不等于错误的自己。冲动只是没来得及和理性说上话。",
+    a:"给购物车一个『过夜权』——睡一觉再决定。大多数冲动活不过一个晚上。"},
+  fatigue:{c:"你是在用消费给自己充电，说明身体已经在喊累了。听见它。",
+    a:"累的时候，便宜的休息最有效：热水澡、早睡、一段白噪音。把『花钱恢复』降级为『不花钱恢复』。"},
+  joy:{c:"为纯粹的快乐买单，是成年人少有的特权。这份钱，花得值。",
+    a:"把快乐型消费记下来，月底回看，你会感谢那个让自己笑的人。"},
+  stress:{c:"你在用消费解压，因为压力真实存在。问题不在你，在负荷。",
+    a:"找一个不花钱的出口：运动、写下来、和人聊聊。把『买』从唯一的解法里挪走。"}
+};
+
+/* ============ 类别识别 ============ */
+const CAT_RULES = [
+  {cat:"住房", kw:["房租","房贷","租金","物业","水电","燃气","电 ","水费"]},
+  {cat:"交通", kw:["地铁","公交","滴滴","打车","加油","高铁","机票","12306","停车","单车","摩拜","充电桩","过路"]},
+  {cat:"通讯", kw:["话费","流量","移动","电信","联通","宽带","网费"]},
+  {cat:"医疗", kw:["药","医院","诊所","体检","牙","医保"]},
+  {cat:"学习", kw:["书","课程","培训","网课","订阅","知网","得到"," Kindle","会员"]},
+  {cat:"旅行", kw:["酒店","民宿","旅游","景点","门票"]},
+  {cat:"社交", kw:["请客","红包","礼物","聚餐","生日","人情","请吃饭","聚会"]},
+  {cat:"娱乐", kw:["电影","演出","游戏","视频","KTV","密室","展"]},
+  {cat:"数码", kw:["苹果","手机","电脑","数码","耳机","平板"]},
+  {cat:"购物", kw:["淘宝","京东","唯品","拼多多","天猫","商城","衣","鞋","包","服饰","超市","便利","盒马","永辉","日用品","杂货","护肤","化妆"]},
+  {cat:"餐饮", kw:["餐","饭","食","外卖","小吃","火锅","咖啡","奶茶","星巴克","麦当劳","肯德基","食堂","餐厅","面包","甜"]}
+];
+function categorize(desc){
+  const d=(desc||"").toLowerCase();
+  for(const r of CAT_RULES){ if(r.kw.some(k=>d.includes(k.toLowerCase()))) return r.cat; }
+  return "其他";
+}
+const CAT_COLORS={"住房":"#9C8FB8","交通":"#7FA8C9","通讯":"#A7C4D4","医疗":"#C98B9B","学习":"#9CB8A4",
+  "旅行":"#E0B25C","社交":"#E89B9B","娱乐":"#E8B4BC","数码":"#8E7CC3","购物":"#E8C39E","餐饮":"#E07A5F","其他":"#B7AEA0"};
+const DEFAULT_FIXED=["住房","交通","通讯","医疗"];
+
+/* ============ 状态 ============ */
+const STORE_KEY="emotion_ledger_v1";
+let state={ raw:[], fixed:new Set(DEFAULT_FIXED), tags:{}, step:0 };
+
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify({raw:state.raw,fixed:[...state.fixed],tags:state.tags})); }catch(e){} }
+function load(){ try{ const s=JSON.parse(localStorage.getItem(STORE_KEY)); if(s){ state.raw=s.raw||[]; state.fixed=new Set(s.fixed||DEFAULT_FIXED); state.tags=s.tags||{}; return true; } }catch(e){} return false; }
+
+/* ============ 工具 ============ */
+function fmt(n){ const v=Math.round(n*100)/100; return "¥"+v.toLocaleString("zh-CN",{minimumFractionDigits:(v%1?2:0),maximumFractionDigits:2}); }
+function $(id){ return document.getElementById(id); }
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
+
+/* ============ 音效（Web Audio，程序生成，无外部文件） ============ */
+let actx=null, soundOn=true;
+function initAudio(){ if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(actx&&actx.state==="suspended") actx.resume(); }
+
+// 五声音阶（C 大调），用于强度 1–5 的升调映射：强度越高，音越高
+const PENTA=[261.63,293.66,329.63,392.00,440.00];
+// 背景音用的更轻的一组（低八度，更空灵）
+const BGM_POOL=[261.63,329.63,392.00,440.00,523.25,587.33];
+
+function tone(freq, dur=0.5, type="sine", gain=0.12, when=0, dest=null){
+  if(!actx) return;
+  const o=actx.createOscillator(), g=actx.createGain();
+  o.type=type; o.frequency.value=freq;
+  const t=actx.currentTime+(when||0);
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.linearRampToValueAtTime(gain,t+0.05);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g); g.connect(dest||actx.destination);
+  o.start(t); o.stop(t+dur+0.06);
+}
+// 小铃声：基音 + 高八度泛音，更“悦耳”
+function bell(freq, dur=0.5, gain=0.10, when=0, dest=null){
+  if(!actx) return;
+  tone(freq, dur, "sine", gain, when, dest);
+  tone(freq*2, dur*0.7, "sine", gain*0.4, when, dest);
+}
+
+function sfx(kind, opt={}){
+  if(!soundOn) return; initAudio();
+  if(kind==="tap"){ const i=Math.max(0,Math.min(4,((opt.n||1)-1))); bell(PENTA[i],0.4,0.10); }
+  else if(kind==="select"){ const root=EMO_MAP[opt.emo]?.note||523.25; bell(root,0.5,0.10); bell(root*1.5,0.6,0.06,0.04); }
+  else if(kind==="done"){ [587.33,659.25,783.99].forEach((f,i)=>bell(f,0.6,0.10,i*0.12)); }
+  else if(kind==="step"){ bell(392,0.5,"triangle",0.07); bell(587.99,0.6,"triangle",0.07,0.14); }
+  else if(kind==="open"){ [392,523.25,659.25].forEach((f,i)=>bell(f,0.7,0.07,i*0.18)); }
+  else if(kind==="back"){ bell(523.25,0.4,0.07); bell(392,0.5,0.06,0.12); }
+}
+
+/* ---- 舒缓背景音乐：低频铺底 pad + 偶发轻钟声，循环 ---- */
+let bgm={started:false, gain:null, pad:[], timer:null, step:0};
+function startBGM(){
+  if(!soundOn||!actx||bgm.started) return;
+  bgm.started=true;
+  bgm.gain=actx.createGain(); bgm.gain.gain.value=0.0; bgm.gain.connect(actx.destination);
+  bgm.gain.gain.linearRampToValueAtTime(0.09, actx.currentTime+3);
+  // 两层柔和铺底（中高音区），带极慢的呼吸颤音，连贯不轰鸣
+  [[523.25,0.018],[392.00,0.015]].forEach(([f,g0])=>{
+    const o=actx.createOscillator(); o.type="sine"; o.frequency.value=f;
+    const g=actx.createGain(); g.gain.value=g0;
+    const lfo=actx.createOscillator(); lfo.type="sine"; lfo.frequency.value=0.05;
+    const lfoG=actx.createGain(); lfoG.gain.value=g0*0.6;
+    lfo.connect(lfoG); lfoG.connect(g.gain);
+    o.connect(g); g.connect(bgm.gain); o.start(); lfo.start();
+    bgm.pad.push(o,lfo);
+  });
+  // 舒缓琶音：音符长、相互重叠（legato），固定节拍不随机断点
+  const SEQ=[523.25,587.33,659.25,783.99,659.25,587.33];
+  const tick=()=>{
+    if(!bgm.started) return;
+    const f=SEQ[bgm.step % SEQ.length]; bgm.step++;
+    bell(f, 2.6, 0.04, 0, bgm.gain);
+    bgm.timer=setTimeout(tick, 1300);
+  };
+  bgm.timer=setTimeout(tick, 500);
+}
+function stopBGM(){
+  if(!bgm.started) return;
+  bgm.started=false;
+  if(bgm.timer){ clearTimeout(bgm.timer); bgm.timer=null; }
+  if(bgm.gain){ const t=actx.currentTime; bgm.gain.gain.cancelScheduledValues(t); bgm.gain.gain.linearRampToValueAtTime(0.0001,t+1.2); }
+  const pad=bgm.pad; bgm.pad=[];
+  setTimeout(()=>{ pad.forEach(o=>{ try{o.stop();}catch(e){} }); },1400);
+}
+
+$("audioBtn").addEventListener("click",()=>{
+  soundOn=!soundOn;
+  $("audioBtn").textContent=soundOn?"♪":"✕";
+  $("audioBtn").style.color=soundOn?"":"var(--ink-soft)";
+  if(soundOn){ initAudio(); sfx("open"); startBGM(); } else { stopBGM(); }
+  toast(soundOn?"音效开":"音效关");
+});
+
+/* ============ 背景几何 ============ */
+function buildShapes(){
+  const colors=["#E8B4BC","#9CB8A4","#A7C4D4","#E0B25C","#9C8FB8"];
+  const box=$("bgShapes");
+  for(let i=0;i<6;i++){
+    const s=document.createElement("div"); s.className="shape "+(i%3===1?"s2":i%3===2?"s3":"");
+    const size=60+Math.random()*90; const top=Math.random()*100, left=Math.random()*100;
+    s.style.top=top+"%"; s.style.left=left+"%"; s.style.width=size+"px"; s.style.height=size+"px";
+    s.style.animationDelay=(-Math.random()*18)+"s";
+    const c=colors[i%colors.length];
+    s.innerHTML=`<svg width="${size}" height="${size}" viewBox="0 0 100 100">
+      <polygon points="50,6 94,50 50,94 6,50" fill="${c}" opacity="0.9"/>
+    </svg>`;
+    box.appendChild(s);
+  }
+}
+
+/* ============ CSV / 文本解析 ============ */
+function parseCSV(text){
+  // robust-ish: split lines, handle quotes
+  const rows=[]; let row=[], cur="", q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(q){
+      if(ch==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; }
+      else cur+=ch;
+    } else {
+      if(ch==='"') q=true;
+      else if(ch===","||ch==="\t"||ch===";"){ row.push(cur); cur=""; }
+      else if(ch==="\n"||ch==="\r"){ if(ch==="\r"&&text[i+1]==="\n") i++; row.push(cur); rows.push(row); row=[]; cur=""; }
+      else cur+=ch;
+    }
+  }
+  if(cur.length||row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r=>r.some(c=>c.trim()!==""));
+}
+function detectColumns(header){
+  const h=header.map((c,i)=>({c:(c||"").trim().toLowerCase(),i}));
+  const find=(keys)=>{ const m=h.find(o=>keys.some(k=>o.c.includes(k))); return m?m.i:-1; };
+  return {
+    date:find(["日期","date","时间","交易日期","记账日"]),
+    time:find(["时间","时刻","时分"]),
+    desc:find(["描述","备注","摘要","说明","交易摘要","商户","name","detail","memo"]),
+    amount:find(["金额","amount","交易金额","支出","价钱","price","money","小数"])
+  };
+}
+function toAmount(v){
+  if(v==null) return 0;
+  let s=String(v).replace(/[^0-9.\-]/g,"");
+  const n=parseFloat(s); return isNaN(n)?0:n;
+}
+function ingestRows(rows){
+  if(!rows.length) return [];
+  let cols=detectColumns(rows[0]);
+  let dataStart=1;
+  // if first row not detected as header, treat row0 as data
+  const hasHeader = cols.date>=0||cols.amount>=0||cols.desc>=0;
+  if(!hasHeader){ cols={date:-1,time:-1,desc:0,amount:1}; dataStart=0; }
+  const out=[];
+  for(let r=dataStart;r<rows.length;r++){
+    const row=rows[r]; if(!row||row.every(c=>!c||!c.trim())) continue;
+    let date=cols.date>=0?row[cols.date]:"";
+    let time=cols.time>=0?row[cols.time]:"";
+    let desc=cols.desc>=0?(row[cols.desc]||""):row.find(c=>c&&c.trim())||"";
+    let amt=toAmount(cols.amount>=0?row[cols.amount]:row.find(c=>toAmount(c)!==0));
+    if(amt<=0) continue; // 只关注支出
+    // 合并日期+时间
+    let dt=null;
+    const dstr=(date||"").trim();
+    const tstr=(time||"").trim();
+    const combined=(dstr+" "+(tstr.match(/\d{1,2}[:：]\d{1,2}/)?tstr:"")).trim();
+    dt=new Date(combined.replace(/[:：]/g,":").replace(/\//g,"-"));
+    if(isNaN(dt.getTime())) dt=new Date();
+    out.push({ date:dt, desc:String(desc).trim()||"未命名支出", amount:amt, category:categorize(desc) });
+  }
+  return out;
+}
+
+/* ============ 示例流水 ============ */
+function demoData(){
+  const base=new Date(2026,9,1);
+  const items=[
+    ["2026-10-01","房租",3200,"住房"],["2026-10-02","地铁充值",100,"交通"],
+    ["2026-10-02","星巴克拿铁",38,"餐饮"],["2026-10-03","京东-机械键盘",459,"数码"],
+    ["2026-10-04","火锅聚餐(请同事)",286,"社交"],["2026-10-05","淘宝-秋季卫衣",299,"购物"],
+    ["2026-10-06","话费充值",120,"通讯"],["2026-10-07","深夜外卖烧烤",78,"餐饮"],
+    ["2026-10-08","加班后打车",46,"交通"],["2026-10-09","便利店晚餐",32,"餐饮"],
+    ["2026-10-10","电影《野草莓》",85,"娱乐"],["2026-10-11","淘宝-香薰蜡烛",128,"购物"],
+    ["2026-10-12","加班后打车",52,"交通"],["2026-10-13","奶茶续命x3",45,"餐饮"],
+    ["2026-10-14","生日礼物(朋友)",260,"社交"],["2026-10-15","健身房月卡分摊",180,"其他"],
+    ["2026-10-16","深夜外卖",64,"餐饮"],["2026-10-17","京东-降噪耳机",699,"数码"],
+    ["2026-10-18","超市采购",156,"购物"],["2026-10-19","加班后打车",48,"交通"],
+    ["2026-10-20","请客户吃饭",420,"社交"],["2026-10-21","护肤品一套",388,"购物"],
+    ["2026-10-22","游戏充值",98,"娱乐"],["2026-10-23","深夜外卖",59,"餐饮"],
+    ["2026-10-24","周末短途民宿",560,"旅行"],["2026-10-25","咖啡x4",72,"餐饮"],
+    ["2026-10-26","淘宝-抱枕地毯",210,"购物"],["2026-10-27","加班后打车",50,"交通"],
+    ["2026-10-28","体检套餐",380,"医疗"],["2026-10-29","深夜外卖",66,"餐饮"],
+    ["2026-10-30","朋友聚餐AA",230,"社交"],["2026-10-31","万圣节装饰+糖果",140,"购物"]
+  ];
+  const times=["09:15","08:40","21:30","22:10","13:20","19:50","20:30","23:05"];
+  return items.map((it,i)=>{
+    const d=new Date(it[0].replace(/-/g,"-"));
+    // 给部分记录一个时间（模拟流水）
+    const t = (i%3===0)?" 21:40":(i%3===1)?" 12:30":(i%3===2)?" 19:50":"";
+    const dt=new Date((it[0]+t).replace(/-/g,"-").replace(/[:：]/g,":"));
+    return {date:dt, desc:it[1], amount:it[2], category:it[3]};
+  });
+}
+
+/* ============ 渲染：步骤 1 概览 ============ */
+function renderOverview(){
+  const cats={};
+  state.raw.forEach(t=>{ cats[t.category]=(cats[t.category]||0)+t.amount; });
+  const entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+  const max=Math.max(...entries.map(e=>e[1]),1);
+  const total=state.raw.reduce((s,t)=>s+t.amount,0);
+  const box=$("catBars"); box.innerHTML="";
+  entries.forEach(([cat,amt],i)=>{
+    const isFixed=state.fixed.has(cat);
+    const row=document.createElement("div"); row.className="cat-row";
+    row.innerHTML=`
+      <div class="cat-name">${cat}${isFixed?'<span class="cat-tag">固定</span>':''}</div>
+      <div class="cat-bar-track"><div class="cat-bar" style="width:0%;background:${CAT_COLORS[cat]||'#bbb'}"></div></div>
+      <div class="cat-amt">${fmt(amt)}</div>`;
+    box.appendChild(row);
+    requestAnimationFrame(()=>{ setTimeout(()=>{ row.querySelector(".cat-bar").style.width=(amt/max*100)+"%"; }, 60+i*60); });
+  });
+  $("overviewTitle").textContent=`你的支出大类（共 ${state.raw.length} 笔，合计 ${fmt(total)}）`;
+  const fixedAmt=state.raw.filter(t=>state.fixed.has(t.category)).reduce((s,t)=>s+t.amount,0);
+  $("overviewNote").textContent=`其中约 ${fmt(fixedAmt)} 是固定支出，已被默认排除。下一步我们只看那些「会失控」的。`;
+  $("overviewCard").classList.remove("hidden");
+  $("toStep2").disabled=false;
+  sfx("open");
+}
+
+/* ============ 渲染：步骤 2 ============ */
+function renderFixedGrid(){
+  const cats=[...new Set(state.raw.map(t=>t.category))];
+  const grid=$("fixedGrid"); grid.innerHTML="";
+  cats.forEach(cat=>{
+    const c=document.createElement("div");
+    c.className="chip"+(state.fixed.has(cat)?" sel":"");
+    c.textContent=cat;
+    c.onclick=()=>{ if(state.fixed.has(cat)) state.fixed.delete(cat); else state.fixed.add(cat); c.classList.toggle("sel"); save(); sfx("tap"); };
+    grid.appendChild(c);
+  });
+}
+function topExpenses(){
+  return state.raw
+    .filter(t=>!state.fixed.has(t.category))
+    .sort((a,b)=>b.amount-a.amount)
+    .slice(0,10);
+}
+function renderTagList(){
+  const list=topExpenses();
+  const box=$("tagList"); box.innerHTML="";
+  if(!list.length){ box.innerHTML='<p class="muted">没有可标记的非固定支出，去上一步调整固定类别，或手动加一笔。</p>'; return; }
+  list.forEach((t,idx)=>{
+    const id=state.raw.indexOf(t);
+    const tag=state.tags[id]||{};
+    const card=document.createElement("div");
+    card.className="tag-card"+(tag.emotion?" done":"");
+    card.dataset.id=id;
+    const wd=["周日","周一","周二","周三","周四","周五","周六"][t.date.getDay()];
+    const emoChips=EMOTIONS.map(e=>`<div class="emo ${tag.emotion===e.key?'sel':''}" data-emo="${e.key}" style="${tag.emotion===e.key?`background:${e.color}`:''}"><span class="swatch" style="background:${e.color}"></span>${e.name}</div>`).join("");
+    const dots=[1,2,3,4,5].map(n=>`<div class="dot-i ${tag.intensity>=n?'on':''}" data-n="${n}"></div>`).join("");
+    card.innerHTML=`
+      <div class="head">
+        <div><div class="desc">${t.desc}</div><div class="meta">${t.date.getMonth()+1}月${t.date.getDate()}日 · ${wd} · ${t.category}</div></div>
+        <div class="amt">${fmt(t.amount)}</div>
+      </div>
+      <div class="emo-pick">${emoChips}</div>
+      <div class="intensity"><span class="lab">情绪强度</span><div class="dots">${dots}</div><span class="lab" style="margin-left:auto">${tag.emotion?`<span class="done-mark">✓ 已标记</span>`:''}</span></div>
+    `;
+    // emotion pick
+    card.querySelectorAll(".emo").forEach(el=>{
+      el.onclick=()=>{
+        const k=el.dataset.emo;
+        state.tags[id]=Object.assign({},state.tags[id],{emotion:k});
+        card.querySelectorAll(".emo").forEach(x=>{ const on=x.dataset.emo===k; x.classList.toggle("sel",on); x.style.background=on?EMO_MAP[k].color:""; });
+        card.classList.add("done");
+        card.querySelector(".intensity .lab:last-child").innerHTML='<span class="done-mark">✓ 已标记</span>';
+        if(!state.tags[id].intensity) setIntensity(card,id,3);
+        save(); sfx("select",{emo:k}); refreshTagProgress();
+      };
+    });
+    // intensity
+    card.querySelectorAll(".dot-i").forEach(el=>{
+      el.onclick=()=>{ setIntensity(card,id,parseInt(el.dataset.n)); save(); sfx("tap",{n:parseInt(el.dataset.n)}); };
+    });
+    box.appendChild(card);
+  });
+  refreshTagProgress();
+}
+function setIntensity(card,id,n){
+  state.tags[id]=Object.assign({},state.tags[id],{intensity:n});
+  card.querySelectorAll(".dot-i").forEach(d=>{ d.classList.toggle("on",parseInt(d.dataset.n)<=n); });
+}
+function refreshTagProgress(){
+  const tagged=Object.keys(state.tags).filter(k=>state.tags[k]&&state.tags[k].emotion).length;
+  $("tagProgress").textContent=`已标记 ${tagged} 笔。标记 1 笔以上即可生成结果——不用全标完。`;
+  $("toStep3").disabled=tagged===0;
+}
+
+/* ============ 渲染：步骤 3 结果 ============ */
+function computeInsights(){
+  const tagged=Object.entries(state.tags).filter(([k,v])=>v&&v.emotion);
+  const byEmo={};
+  let totalTagged=0;
+  tagged.forEach(([k,v])=>{
+    const t=state.raw[parseInt(k)]; if(!t) return;
+    byEmo[v.emotion]=(byEmo[v.emotion]||0)+t.amount;
+    totalTagged+=t.amount;
+  });
+  const entries=Object.entries(byEmo).sort((a,b)=>b[1]-a[1]);
+  const pct=entries.map(([e,amt])=>({emotion:e,amount:amt,pct:totalTagged?amt/totalTagged*100:0}));
+  return {pct,totalTagged,count:tagged.length};
+}
+function weekdayPattern(emoKey){
+  const ts=Object.entries(state.tags).filter(([k,v])=>v&&v.emotion===emoKey).map(([k])=>state.raw[parseInt(k)]);
+  const wd=["周日","周一","周二","周三","周四","周五","周六"];
+  const wcount={}; wd.forEach(w=>wcount[w]=0);
+  const hbucket={morning:0,afternoon:0,evening:0,night:0};
+  ts.forEach(t=>{ wcount[wd[t.date.getDay()]]++; const h=t.date.getHours(); if(h>=5&&h<11)hbucket.morning++; else if(h>=11&&h<17)hbucket.afternoon++; else if(h>=17&&h<21)hbucket.evening++; else hbucket.night++; });
+  const topWd=Object.entries(wcount).filter(([w,c])=>c>0).sort((a,b)=>b[1]-a[1]).slice(0,2).map(e=>e[0]);
+  const topH=Object.entries(hbucket).filter(([h,c])=>c>0).sort((a,b)=>b[1]-a[1])[0];
+  const hLabel={morning:"早晨",afternoon:"午后",evening:"傍晚",night:"深夜"}[topH?topH[0]:"evening"];
+  return {topWd,hLabel};
+}
+function renderResult(){
+  const {pct,totalTagged,count}=computeInsights();
+  const tower=$("tower"); tower.innerHTML="";
+  if(!pct.length){ $("resultHeadline").textContent="还没标记任何支出"; $("insightBox").innerHTML="回到上一步，给一两笔打个情绪标签吧。"; return; }
+  const top=pct[0];
+  $("resultHeadline").textContent=`你的钱，主要流向了「${EMO_MAP[top.emotion].name}」`;
+  $("resultSub").textContent=`在已标记的 ${fmt(totalTagged)} 中，占比最高的情绪如下——`;
+  $("statLine").innerHTML=`
+    <div class="s"><div class="v">${count}</div><div class="l">已标记笔数</div></div>
+    <div class="s"><div class="v">${pct.length}</div><div class="l">捕捉到的情绪</div></div>
+    <div class="s"><div class="v">${top.pct.toFixed(0)}%</div><div class="l">最高占比</div></div>`;
+  pct.forEach((p,i)=>{
+    const e=EMO_MAP[p.emotion];
+    const slab=document.createElement("div");
+    slab.className="slab";
+    slab.style.background=`linear-gradient(120deg,${e.color},${e.color}cc)`;
+    slab.style.animationDelay=(i*0.12)+"s";
+    slab.innerHTML=`<div><div class="emo-name">${e.name}</div><div class="emo-sub">${e.desc}</div></div><div class="emo-pct">${p.pct.toFixed(0)}%</div>`;
+    tower.appendChild(slab);
+  });
+
+  // insight + comfort + action
+  const pat=weekdayPattern(top.emotion);
+  const wdStr=pat.topWd.join("、");
+  const scene = wdStr? `你的「${EMO_MAP[top.emotion].name}」型消费集中在 <b>${wdStr}</b>，多在 <b>${pat.hLabel}</b>。`:`你的「${EMO_MAP[top.emotion].name}」型消费没有明显的时间规律，更像随手发生。`;
+  let secondLine="";
+  if(pct[1] && pct[1].pct>=18){ secondLine=`其次是「${EMO_MAP[pct[1].emotion].name}」（${pct[1].pct.toFixed(0)}%）——它和「${EMO_MAP[top.emotion].name}」常常结伴出现。`; }
+  $("insightBox").innerHTML=`<span class="tag-line">🔍 你看见了吗：</span><br/>${scene}${secondLine?("<br/>"+secondLine):""}`;
+
+  const cm=COMFORT[top.emotion];
+  let actionTxt=cm.a;
+  if(top.emotion==="anxiety"){ actionTxt=cm.a.replace("___","「"+EMO_MAP[top.emotion].name+"」"); }
+  $("comfortBox").innerHTML=`<b>给自己的话</b><br/>${cm.c}`;
+  $("actionBox").innerHTML=`<b>一个可以试的小动作</b><br/>${actionTxt}`;
+  sfx("done");
+}
+
+/* ============ 导航 ============ */
+function showPanel(id){
+  document.querySelectorAll(".panel").forEach(p=>p.classList.add("hidden"));
+  $(id).classList.remove("hidden"); $(id).classList.remove("panel"); void $(id).offsetWidth; $(id).classList.add("panel");
+}
+function setStepper(step){
+  document.querySelectorAll(".step-pill").forEach(p=>{
+    const s=parseInt(p.dataset.step);
+    p.classList.toggle("active",s===step);
+    p.classList.toggle("done",s<step);
+  });
+}
+function go(step){
+  state.step=step; save();
+  setStepper(step);
+  if(step===1){ showPanel("panel-1"); if(state.raw.length) renderOverview(); }
+  if(step===2){ renderFixedGrid(); renderTagList(); showPanel("panel-2"); sfx("step"); }
+  if(step===3){ renderResult(); showPanel("panel-3"); }
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* ============ 事件绑定 ============ */
+$("startBtn").onclick=()=>{ initAudio(); sfx("open"); startBGM(); setStepper(1); showPanel("panel-1"); };
+$("backToIntro").onclick=()=>{ setStepper(0); showPanel("panel-intro"); };
+$("demoBtn").onclick=()=>{ state.raw=demoData(); save(); renderOverview(); };
+$("drop").onclick=()=>$("fileInput").click();
+$("fileInput").onchange=(e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader(); r.onload=()=>{ ingestFromText(r.result); }; r.readAsText(f);
+};
+$("parseBtn").onclick=()=>{ const t=$("pasteArea").value.trim(); if(!t){ toast("先粘贴或选文件"); return; } ingestFromText(t); };
+function ingestFromText(text){
+  const rows=parseCSV(text);
+  const data=ingestRows(rows);
+  if(!data.length){ toast("没解析到支出，检查格式或列名"); return; }
+  state.raw=data; save(); renderOverview(); sfx("open"); toast(`已导入 ${data.length} 笔支出`);
+}
+$("toStep2").onclick=()=>go(2);
+$("backTo1").onclick=()=>go(1);
+$("toStep3").onclick=()=>go(3);
+$("backTo2").onclick=()=>go(2);
+$("addBtn").onclick=()=>{
+  const desc=$("addDesc").value.trim(); const amt=parseFloat($("addAmt").value);
+  if(!desc||isNaN(amt)||amt<=0){ toast("填描述和金额"); return; }
+  const t={date:new Date(),desc,amount:amt,category:"其他"};
+  state.raw.push(t); const id=state.raw.length-1; state.tags[id]={}; save();
+  $("addDesc").value=""; $("addAmt").value="";
+  renderTagList(); sfx("tap"); toast("已加入，去打个标签");
+};
+$("restartBtn").onclick=()=>{
+  state={raw:[],fixed:new Set(DEFAULT_FIXED),tags:{},step:0}; save();
+  $("overviewCard").classList.add("hidden"); $("toStep2").disabled=true;
+  setStepper(0); showPanel("panel-intro"); sfx("back");
+};
+
+/* ============ 初始化 ============ */
+buildShapes();
+if(load() && state.raw.length){
+  // 恢复上次进度
+  setStepper(state.step||0);
+  if((state.step||0)>=1){ renderOverview(); }
+  if((state.step||0)===2){ renderFixedGrid(); renderTagList(); }
+  if((state.step||0)>=3){ /* 仍展示 intro，用户点继续 */ }
+  // 简单恢复：停在对应面板
+  if((state.step||0)===1) showPanel("panel-1");
+  else if((state.step||0)===2) showPanel("panel-2");
+  else if((state.step||0)>=3){ showPanel("panel-1"); }
+}
+</script>
+</body>
+</html>
